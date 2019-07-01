@@ -105,7 +105,7 @@ function usage() {
 
 function setupWorkload(wl_filename, args) {
     let contents = fs.readFileSync(wl_filename, 'utf8');
-    let tasks = contents.split(os.EOL);
+    let tasks = contents.split(os.EOL).filter((value, idx, array) => { return value[0] != '#'; });
     tasks.pop();
 
     // extract defines from workload list
