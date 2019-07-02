@@ -7,8 +7,11 @@ const exec = util.promisify(require('child_process').exec);
 const process = require('process');
 const minimist = require('minimist');
 
+let total_slots = 0;
 let avail_slots = 0;
+let start_time = new Date();
 let pending_tasks = new Array();
+let thread_end_times = new Array();
 
 function getTimestamp(time) {
     function zeroPadString(num) {
@@ -38,6 +41,20 @@ function getDurationString(seconds) {
     return ret;
 }
 
+function fin() {
+    let end_time = new Date();
+    let total_duration = end_time - start_time;
+
+    let unused_area = 0;
+    for(let thread_end_time of thread_end_times) {
+        unused_area += end_time - thread_end_time;
+    }
+    let total_area = total_duration * total_slots;
+
+    console.log(getTimestamp(end_time) + ' completed execution in ' + getDurationString(total_duration / 1000.0));
+    console.log(getTimestamp(end_time) + ' utilization ' + Number.parseFloat(((total_area - unused_area) / total_area * 100)).toFixed(2) + '%');
+}
+
 async function acquireSlot() {
     if(avail_slots > 0) {
         // if a slot is available, occupy it immediately
@@ -60,18 +77,24 @@ function releaseSlot() {
         acquire_resolve();
     } else {
         // if no tasks are pending, just free the slot
+        thread_end_times.push(new Date());
         ++avail_slots;
+        if(avail_slots == total_slots) {
+            fin();
+        }
     }
 }
 
 function schedule(tasks)
 {
-    tasks.forEach(async (task) => {
+    let total_tasks = tasks.length;
+
+    tasks.forEach(async (task, idx) => {
         // wait for a slot and sleep if none are available
         let slot_promise = await acquireSlot();
 
         // execute the task
-        console.log(getTimestamp(new Date()) + ' starting `' + task + '`');
+        console.log(getTimestamp(new Date()) + ' (' + idx + '/' + total_tasks + ') starting `' + task + '`');
         let workload_promise = exec(task);
 
         let start = process.hrtime();
@@ -79,7 +102,7 @@ function schedule(tasks)
         let end = process.hrtime(start);
 
         // once the command has executed, output the results and free a slot
-        console.log(getTimestamp(new Date()) + ' finished `' + task + '` in ' + getDurationString(end[0]));
+        console.log(getTimestamp(new Date()) + ' (' + idx + '/' + total_tasks + ') finished `' + task + '` in ' + getDurationString(end[0]));
         if(stdout) {
             console.log('=== stdout');
             console.log(stdout);
@@ -153,6 +176,7 @@ function main() {
     } else {
         avail_slots = args['n'];
     }
+    total_slots = avail_slots;
 
     let tasks = setupWorkload(args['w'], args);
     schedule(tasks);
