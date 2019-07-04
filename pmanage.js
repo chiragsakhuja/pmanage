@@ -88,13 +88,14 @@ function releaseSlot() {
 function schedule(tasks)
 {
     let total_tasks = tasks.length;
+    let completed_tasks = 0;
 
     tasks.forEach(async (task, idx) => {
         // wait for a slot and sleep if none are available
         let slot_promise = await acquireSlot();
 
         // execute the task
-        console.log(getTimestamp(new Date()) + ' (' + idx + '/' + total_tasks + ') starting `' + task + '`');
+        console.log(getTimestamp(new Date()) + ' (' + (idx + 1) + '/' + total_tasks + ') starting `' + task + '`');
         let workload_promise = exec(task);
 
         let start = process.hrtime();
@@ -102,7 +103,8 @@ function schedule(tasks)
         let end = process.hrtime(start);
 
         // once the command has executed, output the results and free a slot
-        console.log(getTimestamp(new Date()) + ' (' + idx + '/' + total_tasks + ') finished `' + task + '` in ' + getDurationString(end[0]));
+        console.log(getTimestamp(new Date()) + ' (' + (completed_tasks + 1) + '/' + total_tasks + ') finished `' + task + '` in ' + getDurationString(end[0]));
+        ++completed_tasks;
         if(stdout) {
             console.log('=== stdout');
             console.log(stdout);
