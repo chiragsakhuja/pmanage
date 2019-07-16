@@ -12,6 +12,7 @@ let avail_slots = 0;
 let start_time = new Date();
 let pending_tasks = new Array();
 let thread_end_times = new Array();
+let uptime_interval = null;
 
 function getTimestamp(time) {
     function zeroPadString(num) {
@@ -37,8 +38,23 @@ function getDurationString(seconds) {
         ret += Math.floor(seconds / 60) + 'm';
         seconds %= 60;
     }
-    ret += seconds + 's';
+    ret += seconds.toFixed(2) + 's';
     return ret;
+}
+
+async function asyncExec(command) {
+    let {stdout, stderr} = await exec(command);
+    return stdout.replace(/(\r\n|\n|\r)/gm, '');
+}
+
+async function begin() {
+    let output = await asyncExec('uname -a');
+    console.log(getTimestamp(new Date()) + ' ' + output);
+}
+
+async function uptime() {
+    let output = await asyncExec('uptime');
+    console.log(getTimestamp(new Date()) + ' ' + output);
 }
 
 function fin() {
@@ -53,6 +69,8 @@ function fin() {
 
     console.log(getTimestamp(end_time) + ' completed execution in ' + getDurationString(total_duration / 1000.0));
     console.log(getTimestamp(end_time) + ' utilization ' + Number.parseFloat(((total_area - unused_area) / total_area * 100)).toFixed(2) + '%');
+
+    clearInterval(uptime_interval);
 }
 
 async function acquireSlot() {
@@ -180,7 +198,9 @@ function main() {
     }
     total_slots = avail_slots;
 
+    begin();
     let tasks = setupWorkload(args['w'], args);
+    uptime_interval = setInterval(uptime, 300000);
     schedule(tasks);
 }
 
