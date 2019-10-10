@@ -47,14 +47,15 @@ async function asyncExec(command) {
     return stdout.replace(/(\r\n|\n|\r)/gm, '');
 }
 
-async function begin() {
-    let output = await asyncExec('uname -a');
-    console.log(getTimestamp(new Date()) + ' ' + output);
-}
-
 async function uptime() {
     let output = await asyncExec('uptime');
     console.log(getTimestamp(new Date()) + ' ' + output);
+}
+
+async function begin() {
+    let output = await asyncExec('uname -a');
+    console.log(getTimestamp(new Date()) + ' ' + output);
+    uptime();
 }
 
 function fin() {
